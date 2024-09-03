@@ -1,0 +1,223 @@
+{
+	"name": "SilverToGold",
+	"properties": {
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "sparkpool",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "28g",
+			"driverCores": 4,
+			"executorMemory": "28g",
+			"executorCores": 4,
+			"numExecutors": 2,
+			"runAsWorkspaceSystemIdentity": false,
+			"conf": {
+				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.minExecutors": "2",
+				"spark.dynamicAllocation.maxExecutors": "2",
+				"spark.autotune.trackingId": "a0e9e22a-23a0-44c6-b35e-30f79e64cb4d"
+			}
+		},
+		"metadata": {
+			"saveOutput": true,
+			"synapse_widget": {
+				"version": "0.1"
+			},
+			"enableDebugMode": false,
+			"language_info": {
+				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/e77cd002-a175-4971-86d7-85363afb2b5b/resourceGroups/blobtriggerfuncapp-northeurop/providers/Microsoft.Synapse/workspaces/fintechdatamigration/bigDataPools/sparkpool",
+				"name": "sparkpool",
+				"type": "Spark",
+				"endpoint": "https://fintechdatamigration.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/sparkpool",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net",
+					"authHeader": null
+				},
+				"sparkVersion": "3.4",
+				"nodeCount": 10,
+				"cores": 4,
+				"memory": 28,
+				"extraHeader": null
+			},
+			"sessionKeepAliveTimeout": 30
+		},
+		"cells": [
+			{
+				"cell_type": "code",
+				"source": [
+					"from pyspark.sql.functions import *\n",
+					"\n",
+					"# Define paths\n",
+					"silver_base_path = \"abfss://fintech@industrialprojects1.dfs.core.windows.net/Silver/fintech/\"\n",
+					"output_base_path = \"abfss://fintech@industrialprojects1.dfs.core.windows.net/Gold/fintech/\"\n",
+					"\n",
+					"# Load data from the silver layer\n",
+					"accounts_df = spark.read.format(\"delta\").load(f\"{silver_base_path}Accounts/\")\n",
+					"customers_df = spark.read.format(\"delta\").load(f\"{silver_base_path}Customers/\")\n",
+					"loans_df = spark.read.format(\"delta\").load(f\"{silver_base_path}Loans/\")\n",
+					"payments_df = spark.read.format(\"delta\").load(f\"{silver_base_path}Payments/\")\n",
+					"transactions_df = spark.read.format(\"delta\").load(f\"{silver_base_path}Transactions/\")"
+				],
+				"execution_count": 3
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"dim_customers_df = customers_df.select(\n",
+					"    col(\"CustomerID\").alias(\"customer_id\"),\n",
+					"    col(\"FirstName\").alias(\"first_name\"),\n",
+					"    col(\"LastName\").alias(\"last_name\"),\n",
+					"    col(\"Email\").alias(\"email\"),\n",
+					"    col(\"PhoneNumber\").alias(\"phone_number\"),\n",
+					"    col(\"Address\").alias(\"address\"),\n",
+					"    col(\"City\").alias(\"city\"),\n",
+					"    col(\"State\").alias(\"state\"),\n",
+					"    col(\"Country\").alias(\"country\"),\n",
+					"    col(\"ZipCode\").alias(\"zip_code\"),\n",
+					"    col(\"SignupDate\").alias(\"signup_date\")\n",
+					")\n",
+					"\n",
+					"dim_customers_df.write.format(\"delta\").mode(\"overwrite\").save(f\"{output_base_path}dim_customers/\")\n",
+					""
+				],
+				"execution_count": 4
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"dim_accounts_df = accounts_df.select(\n",
+					"    col(\"AccountID\").alias(\"account_id\"),\n",
+					"    col(\"AccountType\").alias(\"account_type\"),\n",
+					"    col(\"Balance\").alias(\"balance\"),\n",
+					"    col(\"OpenDate\").alias(\"open_date\"),\n",
+					"    col(\"AccountAgeYears\").alias(\"account_age_years\")\n",
+					")\n",
+					"\n",
+					"dim_accounts_df.write.format(\"delta\").mode(\"overwrite\").save(f\"{output_base_path}dim_accounts/\")\n",
+					""
+				],
+				"execution_count": 5
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"dim_loans_df = loans_df.select(\n",
+					"    col(\"LoanID\").alias(\"loan_id\"),\n",
+					"    col(\"LoanType\").alias(\"loan_type\"),\n",
+					"    col(\"LoanAmount\").alias(\"loan_amount\"),\n",
+					"    col(\"InterestRate\").alias(\"interest_rate\"),\n",
+					"    col(\"LoanStartDate\").alias(\"loan_start_date\"),\n",
+					"    col(\"LoanEndDate\").alias(\"loan_end_date\"),\n",
+					"    col(\"TotalInterest\").alias(\"total_interest\"),\n",
+					"    col(\"LoanDurationYears\").alias(\"loan_duration_years\")\n",
+					")\n",
+					"\n",
+					"dim_loans_df.write.format(\"delta\").mode(\"overwrite\").save(f\"{output_base_path}dim_loans/\")\n",
+					""
+				],
+				"execution_count": 6
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"fact_payments_df = payments_df \\\n",
+					"    .join(loans_df.select(\"LoanID\", \"CustomerID\"), \"LoanID\") \\\n",
+					"    .select(\n",
+					"        col(\"PaymentID\").alias(\"payment_id\"),\n",
+					"        col(\"LoanID\").alias(\"loan_id\"),\n",
+					"        col(\"CustomerID\").alias(\"customer_id\"),\n",
+					"        col(\"PaymentDate\").alias(\"payment_date\"),\n",
+					"        col(\"PaymentAmount\").alias(\"payment_amount\"),\n",
+					"        col(\"PaymentMethod\").alias(\"payment_method\")\n",
+					"    )\n",
+					"\n",
+					"fact_payments_df.write.format(\"delta\").mode(\"overwrite\").save(f\"{output_base_path}fact_payments/\")\n",
+					""
+				],
+				"execution_count": 7
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"fact_transactions_df = transactions_df \\\n",
+					"    .join(accounts_df.select(\"AccountID\", \"CustomerID\"), \"AccountID\") \\\n",
+					"    .select(\n",
+					"        col(\"TransactionID\").alias(\"transaction_id\"),\n",
+					"        col(\"AccountID\").alias(\"account_id\"),\n",
+					"        col(\"CustomerID\").alias(\"customer_id\"),\n",
+					"        col(\"TransactionDate\").alias(\"transaction_date\"),\n",
+					"        col(\"Amount\").alias(\"amount\"),\n",
+					"        col(\"TransactionType\").alias(\"transaction_type\"),\n",
+					"        col(\"Description\").alias(\"description\")\n",
+					"    )\n",
+					"\n",
+					"fact_transactions_df.write.format(\"delta\").mode(\"overwrite\").save(f\"{output_base_path}fact_transactions/\")\n",
+					""
+				],
+				"execution_count": 8
+			}
+		]
+	}
+}
