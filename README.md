@@ -1,0 +1,1 @@
+# Fintech-Data-Migration-Pipeline---Azure-Synapse-Logic-apps
